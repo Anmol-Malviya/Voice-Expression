@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     APP_PORT: int = 8000
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
     
-    # JWT Authentication
-    JWT_SECRET: str = "75db929c4354f17698bb53a21fd3448abcf7ceae390aa30436fd35c543a6e741"
+    # JWT Authentication (Loaded strictly from .env / backend/.env)
+    JWT_SECRET: str = "change_me_in_env_file_super_secret_jwt_key_ps16"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
