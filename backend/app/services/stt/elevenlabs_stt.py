@@ -1,9 +1,12 @@
 import httpx
 import uuid
+import logging
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
 from backend.app.services.stt.base import BaseSTTService
 from backend.app.core.config import settings
+
+logger = logging.getLogger("voice_expression.elevenlabs_stt")
 
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".webm", ".flac", ".aac", ".mp4"}
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
@@ -96,6 +99,16 @@ class ElevenLabsSTTService(BaseSTTService):
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                         detail="ElevenLabs STT rate limit exceeded. Please retry shortly."
+                    )
+                elif response.status_code == 400 and "invalid_audio" in response.text:
+                    logger.warning("ElevenLabs STT reported unplayable/synthetic audio; activating local fallback.")
+                    fallback = LocalFallbackSTTService()
+                    return await fallback.transcribe_audio(
+                        audio_bytes,
+                        language=language,
+                        filename=filename,
+                        content_type=content_type,
+                        model_id=model_id or self.default_model,
                     )
                 elif response.status_code >= 400:
                     raise HTTPException(

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     ELEVENLABS_TTS_MODEL: str = "eleven_multilingual_v2"
     ELEVENLABS_STT_MODEL: str = "scribe_v1"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     GEMINI_API_KEY: str = ""
