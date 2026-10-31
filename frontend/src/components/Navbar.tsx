@@ -159,16 +159,17 @@ export const Navbar = () => {
           </nav>
 
           {/* Accessibility Quick Toggles & User Auth CTA */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" suppressHydrationWarning>
             {/* Font Size Cycle */}
             <button
               onClick={cycleFontSize}
               className="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-black min-h-[44px] flex items-center gap-1.5 transition"
               title={`Cycle text size: ${fontSize}`}
               aria-label={`Cycle font size. Current is ${fontSize}`}
+              suppressHydrationWarning
             >
               <Type className="w-4 h-4 text-[#6651E8] dark:text-purple-400" />
-              <span className="hidden sm:inline capitalize">{fontSize}</span>
+              <span className="hidden sm:inline capitalize" suppressHydrationWarning>{fontSize}</span>
             </button>
 
             {/* High Contrast */}
@@ -181,9 +182,10 @@ export const Navbar = () => {
               }`}
               title="Toggle High Contrast"
               aria-pressed={highContrast}
+              suppressHydrationWarning
             >
               <Eye className="w-4 h-4 text-amber-500" />
-              <span className="hidden sm:inline">Contrast</span>
+              <span className="hidden sm:inline" suppressHydrationWarning>Contrast</span>
             </button>
 
             {/* Theme Toggle */}
@@ -191,6 +193,7 @@ export const Navbar = () => {
               onClick={toggleTheme}
               className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[44px] min-w-[44px] flex items-center justify-center transition"
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              suppressHydrationWarning
             >
               {theme === 'dark' ? (
                 <Sun className="w-5 h-5 text-amber-400" />

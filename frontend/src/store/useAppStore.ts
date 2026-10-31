@@ -25,6 +25,7 @@ interface AppState {
   theme: 'light' | 'dark';
   reducedMotion: boolean;
   language: string;
+  initFromStorage: () => void;
   setFontSize: (size: 'normal' | 'large' | 'xlarge') => void;
   cycleFontSize: () => void;
   toggleHighContrast: () => void;
@@ -66,11 +67,9 @@ const DEMO_USER: UserProfile = {
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
-  // Auth
-  user: typeof window !== 'undefined' && localStorage.getItem('voice_user')
-    ? JSON.parse(localStorage.getItem('voice_user')!)
-    : DEMO_USER,
-  token: typeof window !== 'undefined' ? localStorage.getItem('voice_token') || 'demo_token' : 'demo_token',
+  // Auth (consistent defaults on server & client to prevent hydration mismatch)
+  user: DEMO_USER,
+  token: 'demo_token',
   isAuthenticated: true,
 
   setUser: (user) => {
@@ -105,12 +104,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ user: DEMO_USER, token: 'demo_jwt_token_alex', isAuthenticated: true });
   },
 
-  // Accessibility
-  fontSize: (typeof window !== 'undefined' && (localStorage.getItem('pref_font_size') as any)) || 'large',
-  highContrast: typeof window !== 'undefined' && localStorage.getItem('pref_high_contrast') === 'true',
-  theme: (typeof window !== 'undefined' && (localStorage.getItem('pref_theme') as any)) || 'light',
-  reducedMotion: typeof window !== 'undefined' && localStorage.getItem('pref_reduced_motion') === 'true',
-  language: typeof window !== 'undefined' ? localStorage.getItem('pref_language') || 'en' : 'en',
+  // Accessibility (consistent defaults on server & client to prevent hydration mismatch)
+  fontSize: 'large',
+  highContrast: false,
+  theme: 'light',
+  reducedMotion: false,
+  language: 'en',
+
+  initFromStorage: () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedUser = localStorage.getItem('voice_user');
+      const savedToken = localStorage.getItem('voice_token');
+      const savedFontSize = localStorage.getItem('pref_font_size') as 'normal' | 'large' | 'xlarge' | null;
+      const savedContrast = localStorage.getItem('pref_high_contrast');
+      const savedTheme = localStorage.getItem('pref_theme') as 'light' | 'dark' | null;
+      const savedMotion = localStorage.getItem('pref_reduced_motion');
+      const savedLang = localStorage.getItem('pref_language');
+
+      set({
+        ...(savedUser ? { user: JSON.parse(savedUser) } : {}),
+        ...(savedToken ? { token: savedToken } : {}),
+        ...(savedFontSize ? { fontSize: savedFontSize } : {}),
+        ...(savedContrast !== null ? { highContrast: savedContrast === 'true' } : {}),
+        ...(savedTheme ? { theme: savedTheme } : {}),
+        ...(savedMotion !== null ? { reducedMotion: savedMotion === 'true' } : {}),
+        ...(savedLang ? { language: savedLang } : {}),
+      });
+    } catch (e) {
+      console.warn('Failed to load preferences from storage:', e);
+    }
+  },
 
   setFontSize: (fontSize) => {
     if (typeof window !== 'undefined') localStorage.setItem('pref_font_size', fontSize);

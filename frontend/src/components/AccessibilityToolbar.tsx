@@ -44,16 +44,17 @@ export const AccessibilityToolbar: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" suppressHydrationWarning>
         {/* Text size button */}
         <button
           onClick={cycleFontSize}
           className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-black min-h-[48px] transition"
           title={`Cycle text size (currently ${fontSize})`}
           aria-label={`Cycle font size. Current is ${fontSize}`}
+          suppressHydrationWarning
         >
           <Type className="w-4 h-4 text-purple-600" />
-          <span className="capitalize">{fontSize}</span>
+          <span className="capitalize" suppressHydrationWarning>{fontSize}</span>
         </button>
 
         {/* High contrast button */}
@@ -66,6 +67,7 @@ export const AccessibilityToolbar: React.FC = () => {
           }`}
           title="Toggle High Contrast Mode"
           aria-pressed={highContrast}
+          suppressHydrationWarning
         >
           <Eye className="w-4 h-4 text-amber-500" />
           <span>Contrast</span>

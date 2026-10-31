@@ -4,7 +4,11 @@ import React, { useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const { fontSize, highContrast, theme, reducedMotion } = useAppStore();
+  const { fontSize, highContrast, theme, reducedMotion, initFromStorage } = useAppStore();
+
+  useEffect(() => {
+    initFromStorage();
+  }, [initFromStorage]);
 
   useEffect(() => {
     const root = document.documentElement;
