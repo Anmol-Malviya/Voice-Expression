@@ -49,7 +49,7 @@ class GestureService {
     context?: string;
   }): Promise<GestureRecognitionResult> {
     try {
-      const response = await apiClient.post<any>('/api/v1/gesture/recognize', {
+      const response = await apiClient.post<any>('/gesture/recognize', {
         image_data: params.imageBase64,
         landmarks: params.landmarks,
         gesture_name: params.gestureName,
@@ -95,7 +95,7 @@ class GestureService {
 
   async getVocabulary(): Promise<GestureDefinition[]> {
     try {
-      const response = await apiClient.get<{ vocabulary: GestureDefinition[] }>('/api/v1/gesture/vocabulary');
+      const response = await apiClient.get<{ vocabulary: GestureDefinition[] }>('/gesture/vocabulary');
       if (response.data && response.data.vocabulary) {
         return response.data.vocabulary;
       }
@@ -117,7 +117,7 @@ class GestureService {
 
   async updateMappings(mappings: Record<string, string>): Promise<GestureDefinition[]> {
     try {
-      const response = await apiClient.put<{ vocabulary: GestureDefinition[] }>('/api/v1/gesture/mappings', {
+      const response = await apiClient.put<{ vocabulary: GestureDefinition[] }>('/gesture/mappings', {
         mappings,
       });
       if (response.data && response.data.vocabulary) {
@@ -131,7 +131,7 @@ class GestureService {
 
   async getHistory(): Promise<GestureHistoryItem[]> {
     try {
-      const response = await apiClient.get<{ history: GestureHistoryItem[] }>('/api/v1/gesture/history');
+      const response = await apiClient.get<{ history: GestureHistoryItem[] }>('/gesture/history');
       if (response.data && response.data.history) {
         return response.data.history;
       }
@@ -143,10 +143,12 @@ class GestureService {
 
   getWebSocketUrl(): string {
     if (typeof window === 'undefined') return 'ws://localhost:8000/ws/gesture';
+    const envWs = process.env.NEXT_PUBLIC_WS_URL;
+    if (envWs) return `${envWs}/ws/gesture`;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Default backend port 8000
     const host = window.location.hostname || 'localhost';
-    return `${protocol}//${host}:8000/ws/gesture`;
+    const port = process.env.NODE_ENV === 'production' ? '' : ':8000';
+    return `${protocol}//${host}${port}/ws/gesture`;
   }
 }
 

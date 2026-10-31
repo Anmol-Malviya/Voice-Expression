@@ -26,7 +26,10 @@ class GroqService(BaseLLMService):
         timeout_seconds: float = 12.0,
     ):
         self.api_key = api_key if api_key is not None else settings.GROQ_API_KEY
-        self.model = model or settings.GROQ_MODEL or "openai/gpt-oss-120b"
+        chosen_model = model or settings.GROQ_MODEL or "llama-3.3-70b-versatile"
+        if "gpt-oss" in chosen_model or "openai/" in chosen_model:
+            chosen_model = "llama-3.3-70b-versatile"
+        self.model = chosen_model
         self.timeout_seconds = timeout_seconds
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
 
