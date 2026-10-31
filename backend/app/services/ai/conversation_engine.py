@@ -24,7 +24,17 @@ class ConversationEngine:
     def get_llm_service(self) -> BaseLLMService:
         if self._llm_service:
             return self._llm_service
-        # Provider selection: OpenAI if configured, otherwise fallback to local/Gemini
+        # Ultra-fast Groq LLM if configured
+        if settings.GROQ_API_KEY:
+            from backend.app.services.llm.groq_service import GroqService
+            return GroqService()
+        # OpenAI if configured
+        if settings.OPENAI_API_KEY:
+            return OpenAIService()
+        # Gemini if configured
+        if settings.GEMINI_API_KEY:
+            from backend.app.services.llm.context_assistant import ContextAssistantService
+            return ContextAssistantService()
         return OpenAIService()
 
     async def get_bounded_context(

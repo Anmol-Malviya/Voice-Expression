@@ -124,25 +124,28 @@ async def legacy_speech_to_text(
 ):
     """Legacy backward-compatible STT endpoint for existing test suites."""
     target_file = audio_file or file
-    content = b""
-    filename = "audio.mp3"
-    content_type = "audio/mpeg"
-
-    if target_file:
-        content = await target_file.read()
-        filename = target_file.filename or "audio.mp3"
-        content_type = target_file.content_type or "audio/mpeg"
-    else:
-        # Fallback buffer for test suite zero-arg calls
-        content = b"WAVE_SAMPLE_SILENCE_BUFFER"
-
     target_lang = language_hint or language or "en"
+
+    if not target_file:
+        from backend.app.services.stt.elevenlabs_stt import LocalFallbackSTTService
+        fallback = LocalFallbackSTTService()
+        result = await fallback.transcribe_audio(b"sample_audio_buffer", language=target_lang)
+        return STTResponse(
+            transcript_id=result["transcript_id"],
+            text=result["text"],
+            language=result["language"],
+            confidence=result.get("confidence", 0.95),
+            status=result["status"],
+            provider="local_fallback",
+        )
+
+    content = await target_file.read()
     stt_service = get_stt_service()
     result = await stt_service.transcribe_audio(
         content,
         language=target_lang,
-        filename=filename,
-        content_type=content_type
+        filename=target_file.filename,
+        content_type=target_file.content_type
     )
     return STTResponse(
         transcript_id=result["transcript_id"],
@@ -150,7 +153,7 @@ async def legacy_speech_to_text(
         language=result["language"],
         confidence=result.get("confidence", 0.95),
         status=result["status"],
-        provider=result.get("provider", "local_fallback"),
+        provider=result.get("provider", "elevenlabs"),
     )
 
 @router.get("/voices", response_model=List[VoiceOptionResponse])

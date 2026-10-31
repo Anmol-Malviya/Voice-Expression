@@ -117,18 +117,31 @@ async def test_elevenlabs_stt_timeout_handling():
 async def test_speech_transcribe_api_endpoint_success():
     """Test POST /api/v1/speech/transcribe with multipart audio file upload."""
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        fake_audio_bytes = b"RIFFsampleWAVEdata12345"
-        files = {
-            "audio_file": ("test_recording.wav", fake_audio_bytes, "audio/wav")
-        }
-        data = {"language_preference": "en"}
-        res = await ac.post("/api/v1/speech/transcribe", files=files, data=data)
-        assert res.status_code == 200
-        body = res.json()
-        assert "transcribed_text" in body
-        assert "detected_language" in body
-        assert body["processing_status"] == "completed"
+    mock_result = {
+        "transcript_id": "tr_12345",
+        "text": "Test audio transcribed successfully.",
+        "transcribed_text": "Test audio transcribed successfully.",
+        "language": "en",
+        "detected_language": "en",
+        "confidence": 0.98,
+        "status": "completed",
+        "processing_status": "completed",
+        "provider": "elevenlabs"
+    }
+    with patch("backend.app.services.stt.elevenlabs_stt.ElevenLabsSTTService.transcribe_audio", new_callable=AsyncMock) as mock_stt:
+        mock_stt.return_value = mock_result
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            fake_audio_bytes = b"RIFFsampleWAVEdata12345"
+            files = {
+                "audio_file": ("test_recording.wav", fake_audio_bytes, "audio/wav")
+            }
+            data = {"language_preference": "en"}
+            res = await ac.post("/api/v1/speech/transcribe", files=files, data=data)
+            assert res.status_code == 200
+            body = res.json()
+            assert "transcribed_text" in body
+            assert "detected_language" in body
+            assert body["processing_status"] == "completed"
 
 @pytest.mark.asyncio
 async def test_speech_transcribe_api_endpoint_empty_file_rejected():

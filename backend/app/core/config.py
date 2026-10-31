@@ -3,7 +3,7 @@ from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", "backend/.env"), extra="ignore")
 
     APP_ENV: str = "development"
     APP_HOST: str = "0.0.0.0"
@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
     
     # JWT Authentication
-    JWT_SECRET: str = "super_secret_jwt_key_for_ai_manthan_ps16_assistive_app"
+    JWT_SECRET: str = "75db929c4354f17698bb53a21fd3448abcf7ceae390aa30436fd35c543a6e741"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
@@ -19,11 +19,13 @@ class Settings(BaseSettings):
     MONGODB_URI: str = ""
     MONGODB_DATABASE: str = "ai_manthan"
 
-    # AI Providers (ElevenLabs, OpenAI, Gemini)
+    # AI Providers (ElevenLabs, Groq, OpenAI, Gemini)
     ELEVENLABS_API_KEY: str = ""
-    ELEVENLABS_DEFAULT_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"
+    ELEVENLABS_DEFAULT_VOICE_ID: str = "EXAVITQu4vr4xnSDxMaL"
     ELEVENLABS_TTS_MODEL: str = "eleven_multilingual_v2"
     ELEVENLABS_STT_MODEL: str = "scribe_v1"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     GEMINI_API_KEY: str = ""

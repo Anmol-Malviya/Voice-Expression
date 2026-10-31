@@ -74,6 +74,15 @@ class ElevenLabsTTSService(BaseTTSService):
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="ElevenLabs authentication failed. Please verify your ELEVENLABS_API_KEY."
                     )
+                elif response.status_code == 402 and target_voice != self.default_voice_id:
+                    # Graceful fallback: If library voice requires paid tier, retry with default premade voice
+                    return await self.synthesize(
+                        text=clean_text,
+                        voice_id=self.default_voice_id,
+                        speed=safe_speed,
+                        model_id=model_id,
+                        language=language
+                    )
                 elif response.status_code == 429:
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
