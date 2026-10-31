@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { Send, Volume2, X, Sparkles } from 'lucide-react';
+import { Send, Volume2, X, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 
 interface MessageComposerProps {
@@ -9,6 +9,8 @@ interface MessageComposerProps {
   onChange: (val: string) => void;
   onSend: (text: string) => void;
   onSpeak?: (text: string) => void;
+  onClarify?: () => void;
+  isClarifying?: boolean;
   placeholder?: string;
   disabled?: boolean;
   maxLength?: number;
@@ -19,6 +21,8 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   onChange,
   onSend,
   onSpeak,
+  onClarify,
+  isClarifying = false,
   placeholder = 'Type your message or click a quick phrase below...',
   disabled = false,
   maxLength = 500,
@@ -89,7 +93,26 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           <span className="hidden sm:inline">• Press Enter to send, Shift+Enter for new line</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onClarify && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onClarify}
+              disabled={!value.trim() || disabled || isClarifying}
+              className="gap-2 min-h-[48px] border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+              title="Generate alternative assistive phrasings using AI"
+            >
+              {isClarifying ? (
+                <Loader2 className="w-4 h-4 text-[#6651E8] animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 text-[#6651E8]" />
+              )}
+              <span>AI Suggestions</span>
+            </Button>
+          )}
+
           {onSpeak && (
             <Button
               type="button"
@@ -124,4 +147,3 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 };
 
 export default MessageComposer;
-

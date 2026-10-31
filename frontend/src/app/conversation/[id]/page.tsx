@@ -24,6 +24,9 @@ import {
   Activity,
   ArrowLeft,
   Camera,
+  Loader2,
+  Bot,
+  UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +44,8 @@ import messageService from '@/services/message.service';
 import speechService from '@/services/speech.service';
 import gestureService from '@/services/gesture.service';
 import { Message, CandidateReply } from '@/types';
+
+type AudioProcessingState = 'idle' | 'recording' | 'transcribing' | 'synthesizing' | 'speaking' | 'paused';
 
 export default function LiveConversationPage() {
   const params = useParams();
@@ -63,7 +68,8 @@ export default function LiveConversationPage() {
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Audio Playback State
+  // Audio State Machine
+  const [audioState, setAudioState] = useState<AudioProcessingState>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -79,8 +85,12 @@ export default function LiveConversationPage() {
   const [detectedGesture, setDetectedGesture] = useState('none');
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // AI Multimodal Inference & Strict Confirmation Gate
+  // AI Conversational Intelligence State
   const [isInferring, setIsInferring] = useState(false);
+  const [detectedIntent, setDetectedIntent] = useState<string>('greeting');
+  const [aiExplanation, setAiExplanation] = useState<string>(
+    'Proposals generated to match conversation flow. User confirmation strictly required.'
+  );
   const [candidates, setCandidates] = useState<CandidateReply[]>([
     {
       candidate_id: 'cand_1',
@@ -91,13 +101,13 @@ export default function LiveConversationPage() {
     {
       candidate_id: 'cand_2',
       text: 'Yes, please get me some water.',
-      reason: 'Need expression context',
+      reason: 'Direct hydration request',
       confidence: 0.86,
     },
     {
       candidate_id: 'cand_3',
       text: 'Please give me a moment to respond.',
-      reason: 'Clarification pause',
+      reason: 'Assistive clarification buffer',
       confidence: 0.81,
     },
   ]);
@@ -112,7 +122,7 @@ export default function LiveConversationPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, interimTranscript]);
 
-  // Speech Recognition (STT) Setup
+  // Real Speech Recognition (STT) Setup
   const handleToggleListening = () => {
     if (isListening) {
       if (recognitionRef.current) {
@@ -120,12 +130,15 @@ export default function LiveConversationPage() {
         recognitionRef.current = null;
       }
       setIsListening(false);
+      setAudioState('idle');
       setInterimTranscript('');
       toast.info('Partner microphone paused.');
       return;
     }
 
     setSttError(null);
+    setAudioState('recording');
+
     const recognition = speechService.createSpeechRecognition({
       language: language === 'hi' ? 'hi-IN' : 'en-US',
       continuous: true,
@@ -133,6 +146,7 @@ export default function LiveConversationPage() {
       onResult: (finalText, interimText) => {
         setInterimTranscript(interimText);
         if (finalText.trim()) {
+          setAudioState('transcribing');
           const partnerMsg: Message = {
             id: 'ptn_' + Date.now(),
             conversation_id: conversationId,
@@ -144,17 +158,20 @@ export default function LiveConversationPage() {
           setMessages((prev) => [...prev, partnerMsg]);
           setInterimTranscript('');
 
-          // Trigger contextually ranked AI candidates
+          // Trigger contextually ranked AI candidates via OpenAI/Assistive engine
           triggerCandidateInference(finalText.trim(), detectedGesture);
+          setAudioState('recording');
         }
       },
       onError: (err) => {
         setSttError(err);
         setIsListening(false);
+        setAudioState('idle');
         toast.error(err);
       },
       onEnd: () => {
         setIsListening(false);
+        setAudioState('idle');
       },
     });
 
@@ -163,32 +180,96 @@ export default function LiveConversationPage() {
         recognition.start();
         recognitionRef.current = recognition;
         setIsListening(true);
-        toast.success('Listening to conversation partner...');
+        toast.success('Listening to conversation partner (STT active)...');
       } catch (e) {
         setSttError('Could not start speech recognition.');
         setIsListening(false);
+        setAudioState('idle');
       }
     }
   };
 
-  // Trigger AI Candidate Inference
+  // Trigger Real AI Candidate Inference (OpenAI / Assistive API)
   const triggerCandidateInference = async (partnerText: string, gesture: string) => {
     setIsInferring(true);
     try {
+      const resp = await messageService.getAIResponse({
+        conversationId,
+        userMessage: partnerText,
+        gesture,
+        language,
+      });
+
+      if (resp && resp.candidates && resp.candidates.length > 0) {
+        setCandidates(resp.candidates);
+        setAiExplanation(resp.explanation || resp.rationale || 'Context-aware suggestions proposed.');
+        setDetectedIntent(resp.intent_classification || 'general_statement');
+      } else {
+        const results = await messageService.generateCandidates({
+          conversationId,
+          lastPartnerSpeech: partnerText,
+          detectedGesture: gesture,
+          language,
+        });
+        setCandidates(results);
+      }
+    } catch {
       const results = await messageService.generateCandidates({
+        conversationId,
         lastPartnerSpeech: partnerText,
         detectedGesture: gesture,
         language,
       });
       setCandidates(results);
-    } catch {
     } finally {
       setIsInferring(false);
     }
   };
 
-  // STRICT CONFIRMATION GATE: Never auto-speak! User must tap to speak or edit
-  const handleConfirmCandidate = (candidate: CandidateReply) => {
+  // Clarify typed shorthand in composer (e.g. 'I water' -> alternative proposals)
+  const handleClarifyDraft = async () => {
+    if (!inputText.trim()) return;
+    setIsInferring(true);
+    try {
+      const res = await messageService.getAISuggestions({
+        text: inputText.trim(),
+        conversationId,
+        language,
+      });
+      if (res && res.candidates && res.candidates.length > 0) {
+        setCandidates(res.candidates);
+        setAiExplanation(res.explanation || 'Clarified shorthand into complete polite sentences.');
+        setDetectedIntent(res.intent || 'request_need');
+        toast.success('Generated AI alternative message suggestions!');
+      }
+    } catch (e) {
+      toast.error('Could not generate AI suggestions.');
+    } finally {
+      setIsInferring(false);
+    }
+  };
+
+  // STRICT CONFIRMATION GATE: Confirm only (no speech, visual confirmation)
+  const handleConfirmCandidate = async (candidate: CandidateReply) => {
+    const userMsg: Message = {
+      id: 'usr_' + Date.now(),
+      conversation_id: conversationId,
+      sender: 'user',
+      content: candidate.text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      type: 'ai_suggestion',
+      fusedSignals: detectedGesture !== 'none' ? [`Gesture: ${detectedGesture}`] : undefined,
+      isSpoken: false,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    messageService.sendMessage(conversationId, candidate.text, 'ai_suggestion');
+    messageService.confirmProposal(conversationId, 'confirm', candidate.text);
+    toast.success('Confirmed and added to conversation.');
+  };
+
+  // STRICT CONFIRMATION GATE: Confirm AND Speak aloud via ElevenLabs TTS
+  const handleConfirmAndSpeakCandidate = async (candidate: CandidateReply) => {
     const userMsg: Message = {
       id: 'usr_' + Date.now(),
       conversation_id: conversationId,
@@ -201,13 +282,18 @@ export default function LiveConversationPage() {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    handleSpeakAloud(candidate.text);
-    toast.success('Confirmed and speaking reply!');
+    messageService.sendMessage(conversationId, candidate.text, 'ai_suggestion');
+    messageService.confirmProposal(conversationId, 'confirm', candidate.text);
+
+    toast.success('Confirmed reply! Synthesizing natural voice...');
+    await handleSpeakAloud(candidate.text);
   };
 
+  // Load candidate into composer for user modification
   const handleEditCandidate = (candidate: CandidateReply) => {
     setInputText(candidate.text);
-    toast.info('Candidate reply loaded into composer for editing.');
+    messageService.confirmProposal(conversationId, 'edit', candidate.text);
+    toast.info('Candidate reply loaded into composer. Edit then tap Send or Speak.');
   };
 
   // Send message from Composer
@@ -222,45 +308,63 @@ export default function LiveConversationPage() {
       fusedSignals: detectedGesture !== 'none' ? [`Gesture: ${detectedGesture}`] : undefined,
     };
     setMessages((prev) => [...prev, userMsg]);
+    messageService.sendMessage(conversationId, text, 'text');
     setInputText('');
   };
 
-  // Speak Aloud via TTS
-  const handleSpeakAloud = (text: string) => {
+  // Real TTS Playback (ElevenLabs with browser-native fallback)
+  const handleSpeakAloud = async (text: string) => {
     if (!text.trim()) return;
+
+    setAudioState('synthesizing');
     setIsSpeaking(true);
     setIsPaused(false);
 
-    speechService.speak(text, {
-      rate: speechRate,
-      volume,
-      voiceId: selectedVoice,
-      onStart: () => setIsSpeaking(true),
-      onEnd: () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-      },
-      onError: (err) => {
-        setIsSpeaking(false);
-        toast.error('Speech synthesis encountered an issue.');
-      },
-    });
+    try {
+      await speechService.speakAloud(text, {
+        rate: speechRate,
+        volume,
+        voiceId: selectedVoice,
+        language,
+        onStart: () => {
+          setAudioState('speaking');
+          setIsSpeaking(true);
+        },
+        onEnd: () => {
+          setAudioState('idle');
+          setIsSpeaking(false);
+          setIsPaused(false);
+        },
+        onError: (err) => {
+          setAudioState('idle');
+          setIsSpeaking(false);
+          setIsPaused(false);
+          toast.error('Voice synthesis error: using browser speech synthesis fallback.');
+        },
+      });
+    } catch {
+      setAudioState('idle');
+      setIsSpeaking(false);
+    }
   };
 
   const handlePauseSpeaking = () => {
     speechService.pause();
     setIsPaused(true);
+    setAudioState('paused');
   };
 
   const handleResumeSpeaking = () => {
     speechService.resume();
     setIsPaused(false);
+    setAudioState('speaking');
   };
 
   const handleStopSpeaking = () => {
     speechService.stop();
     setIsSpeaking(false);
     setIsPaused(false);
+    setAudioState('idle');
   };
 
   // Camera Management
@@ -308,7 +412,15 @@ export default function LiveConversationPage() {
         title="Live Assistive Conversation"
         subtitle={`Session ID: ${conversationId} • Mode: Multimodal Fusion`}
         backHref="/dashboard"
-        statusBadge={isListening ? 'Partner Mic Active' : 'Ready'}
+        statusBadge={
+          audioState === 'speaking'
+            ? 'Speaking Aloud'
+            : audioState === 'synthesizing'
+            ? 'Synthesizing Voice...'
+            : isListening
+            ? 'Partner Mic Active'
+            : 'Ready'
+        }
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -329,7 +441,7 @@ export default function LiveConversationPage() {
       {/* Main Split Layout: Left (Dialogue & Composer) / Right (AI Proposals, Phrases, Controls) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left / Central Column: Message History & Composer (7 cols) */}
+        {/* Left Column: Message History & Composer (7 cols) */}
         <div className="lg:col-span-7 flex flex-col space-y-4">
           
           {/* Messages Container */}
@@ -351,7 +463,15 @@ export default function LiveConversationPage() {
               {interimTranscript && (
                 <div className="p-3 my-2 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-200 text-sm font-semibold flex items-center gap-2 animate-pulse">
                   <Mic className="w-4 h-4 text-teal-600 shrink-0" />
-                  <span>Transcribing: "{interimTranscript}"</span>
+                  <span>Transcribing partner speech: "{interimTranscript}"</span>
+                </div>
+              )}
+
+              {/* Audio Synthesizing Indicator */}
+              {audioState === 'synthesizing' && (
+                <div className="p-3 my-2 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-[#6651E8] dark:text-purple-300 text-sm font-semibold flex items-center gap-2 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#6651E8]" />
+                  <span>ElevenLabs TTS is synthesizing natural speech...</span>
                 </div>
               )}
 
@@ -362,18 +482,20 @@ export default function LiveConversationPage() {
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-slate-400">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span>Zero raw media saved</span>
+                <span>Zero raw media saved • Ephemeral memory</span>
               </span>
               <span>{messages.length} messages in dialogue</span>
             </div>
           </div>
 
-          {/* Message Composer */}
+          {/* Message Composer with AI Clarify Button */}
           <MessageComposer
             value={inputText}
             onChange={setInputText}
             onSend={handleSendMessage}
             onSpeak={handleSpeakAloud}
+            onClarify={handleClarifyDraft}
+            isClarifying={isInferring}
           />
         </div>
 
@@ -387,20 +509,25 @@ export default function LiveConversationPage() {
                 <span className="p-1.5 rounded-xl bg-purple-100 dark:bg-purple-950 text-[#6651E8] dark:text-purple-300">
                   <Sparkles className="w-4 h-4" />
                 </span>
-                <h3 className="font-black text-base sm:text-lg text-[#172554] dark:text-white high-contrast:text-yellow-400">
-                  AI Ranked Replies
-                </h3>
+                <div>
+                  <h3 className="font-black text-base sm:text-lg text-[#172554] dark:text-white high-contrast:text-yellow-400 leading-tight">
+                    AI Suggested Proposals
+                  </h3>
+                  <span className="text-[11px] text-purple-600 dark:text-purple-300 font-bold uppercase tracking-wider">
+                    Intent: {detectedIntent.replace('_', ' ')}
+                  </span>
+                </div>
               </div>
-              <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                 Agency Guard
               </span>
             </div>
 
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Candidate sentences proposed by contextual fusion. Tap <strong>Speak</strong> to speak aloud or <strong>Edit</strong> to customize first.
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed bg-purple-50/50 dark:bg-purple-950/20 p-2.5 rounded-xl border border-purple-100 dark:border-purple-900/40">
+              {aiExplanation}
             </p>
 
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {candidates.map((cand, idx) => (
                 <div
                   key={cand.candidate_id}
@@ -419,17 +546,29 @@ export default function LiveConversationPage() {
                     Reason: {cand.reason}
                   </p>
 
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/50">
+                  <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-700/50 flex-wrap">
                     <button
                       onClick={() => handleEditCandidate(cand)}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 min-h-[36px]"
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 min-h-[36px]"
+                      title="Load candidate reply into composer to edit before speaking"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Edit</span>
                     </button>
+
                     <button
                       onClick={() => handleConfirmCandidate(cand)}
+                      className="px-2.5 py-1.5 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950 text-xs font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1 min-h-[36px]"
+                      title="Confirm without speaking aloud"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Confirm</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleConfirmAndSpeakCandidate(cand)}
                       className="px-3.5 py-1.5 rounded-xl bg-[#6651E8] hover:bg-[#533ed4] text-white text-xs font-black flex items-center gap-1.5 min-h-[36px] shadow-sm"
+                      title="Confirm proposal and speak immediately via natural TTS"
                     >
                       <Volume2 className="w-3.5 h-3.5" />
                       <span>Confirm &amp; Speak</span>

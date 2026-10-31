@@ -1,6 +1,35 @@
 import apiClient from '@/lib/api-client';
 import { Message, CandidateReply } from '@/types';
 
+export interface AIResponsePayload {
+  suggested_response: string;
+  alternative_suggestions: string[];
+  intent_classification: string;
+  confidence: number;
+  explanation?: string;
+  rationale?: string;
+  is_proposal: boolean;
+  requires_confirmation: boolean;
+  inference_id: string;
+  candidates: CandidateReply[];
+  needs_clarification: boolean;
+  signals_used: string[];
+  created_at: string;
+}
+
+export interface AISuggestionPayload {
+  original_text: string;
+  suggested_response: string;
+  alternative_suggestions: string[];
+  intent: string;
+  confidence: number;
+  candidates: CandidateReply[];
+  is_proposal: boolean;
+  requires_confirmation: boolean;
+  inference_id: string;
+  explanation?: string;
+}
+
 class MessageService {
   async getMessages(conversationId: string): Promise<Message[]> {
     try {
@@ -74,16 +103,68 @@ class MessageService {
     return newMessage;
   }
 
+  /**
+   * Real OpenAI / Assistive AI response API call.
+   * Calls POST /api/v1/ai/respond with conversation context.
+   */
+  async getAIResponse(params: {
+    conversationId: string;
+    userMessage: string;
+    conversationContext?: any[];
+    language?: string;
+    gesture?: string;
+    lipActive?: boolean;
+  }): Promise<AIResponsePayload> {
+    const response = await apiClient.post<AIResponsePayload>('/ai/respond', {
+      conversation_id: params.conversationId,
+      user_message: params.userMessage,
+      partner_text: params.userMessage,
+      conversation_context: params.conversationContext,
+      preferred_language: params.language || 'en',
+      gesture: params.gesture,
+      lip_active: params.lipActive ?? false,
+    });
+    return response.data;
+  }
+
+  /**
+   * Real AI Suggestion API call for rough text/shorthand (e.g. 'I water').
+   * Calls POST /api/v1/ai/suggest.
+   */
+  async getAISuggestions(params: {
+    text: string;
+    conversationId?: string;
+    language?: string;
+  }): Promise<AISuggestionPayload> {
+    const response = await apiClient.post<AISuggestionPayload>('/ai/suggest', {
+      text: params.text,
+      conversation_id: params.conversationId,
+      language: params.language || 'en',
+    });
+    return response.data;
+  }
+
+  /**
+   * Generates candidate replies using real /ai/respond or /ai/suggest endpoint,
+   * falling back to local heuristic candidates if server is offline.
+   */
   async generateCandidates(context: {
+    conversationId?: string;
     lastPartnerSpeech?: string;
     detectedGesture?: string;
     language?: string;
   }): Promise<CandidateReply[]> {
     try {
-      const response = await apiClient.post<any>('/inference/candidates', context);
-      const items = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-      if (items && items.length > 0) {
-        return items;
+      const resp = await apiClient.post<any>('/ai/respond', {
+        conversation_id: context.conversationId || 'active_session',
+        user_message: context.lastPartnerSpeech || '',
+        partner_text: context.lastPartnerSpeech || '',
+        gesture: context.detectedGesture || 'none',
+        preferred_language: context.language || 'en',
+      });
+
+      if (resp.data && Array.isArray(resp.data.candidates) && resp.data.candidates.length > 0) {
+        return resp.data.candidates;
       }
     } catch {}
 
@@ -128,6 +209,21 @@ class MessageService {
       { candidate_id: 'c2', text: 'Please give me a minute.', reason: 'Assistive response buffer', confidence: 0.84 },
       { candidate_id: 'c3', text: 'Could you please repeat that?', reason: 'Clarification request', confidence: 0.80 },
     ];
+  }
+
+  /**
+   * Confirmation Gate API Call
+   */
+  async confirmProposal(
+    sessionId: string,
+    action: 'confirm' | 'edit' | 'reject',
+    editedText?: string
+  ): Promise<{ confirmation_id: string; status: string; confirmed_text: string | null }> {
+    const res = await apiClient.post<any>(`/sessions/${sessionId}/confirmations`, {
+      action,
+      edited_text: editedText,
+    });
+    return res.data;
   }
 }
 

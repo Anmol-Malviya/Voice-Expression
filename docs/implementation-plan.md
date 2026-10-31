@@ -104,10 +104,70 @@ All routes are fully implemented, interactive, and tested:
 | `/api/v1/phrases/{id}` | PATCH / DELETE | `phrase_service` | Ownership Verified | **Verified (200 OK & 204 No Content)** |
 | `/api/v1/inference/candidates` | POST | Multimodal Intent Fusion | Confirmation Gate Enforced | **Verified (Proposals only; no auto-speak)** |
 
-### 4.3 Automated Pytest Suite Execution
+### 4.3 Automated Pytest Suite Execution (Phase 3)
 
 - **Total Test Suites**: 5
 - **Total Test Cases**: 14
 - **Pass Rate**: **100% (14 passed, 0 failed)**
 - **Verification Command**: `.\backend\venv\Scripts\python.exe -m pytest backend\tests -v`
+
+---
+
+## 5. Phase 4: AI & Voice Intelligence Integration Matrix
+
+### 5.1 Provider-Independent Architecture & Service Directory
+
+```
+backend/app/services/
+├── tts/
+│   ├── base.py                 # Abstract BaseTTSService protocol
+│   ├── elevenlabs_tts.py       # Real ElevenLabs TTS with error handling & headers
+│   └── local_tts.py            # Resilient silent/chime WAV fallback
+├── stt/
+│   ├── base.py                 # Abstract BaseSTTService protocol
+│   └── elevenlabs_stt.py       # Real ElevenLabs Scribe STT + audio format/size guard
+├── llm/
+│   ├── base.py                 # Abstract BaseLLMService protocol
+│   ├── openai_service.py       # Real OpenAI Conversational Intelligence service
+│   └── context_assistant.py    # Gemini & Multimodal heuristic fallback engine
+└── ai/
+    ├── intent_service.py       # Independent intent classifier & multilingual templates
+    └── conversation_engine.py  # Bounded context retrieval & agency safeguards
+```
+
+### 5.2 Phase 4 API Endpoint Verification Matrix
+
+| Endpoint | HTTP Method | Target Service | Parameters & Safeguards | Status |
+|---|---|---|---|---|
+| `/api/v1/speech/synthesize` | POST | `ElevenLabsTTSService` | `text`, `voice_id`, `language`, `model_id`, `speech_speed`. Voice cloning consent check; returns audio stream + metadata headers (`X-Voice-Id`, `X-Speech-Speed`, `X-Audio-Provider`). | **Verified (200 OK & 403 Consent Guard)** |
+| `/api/v1/speech/transcribe` | POST | `ElevenLabsSTTService` | `audio_file` (multipart), `language_preference`. Validates audio presence, MIME, and 25MB size limit. | **Verified (200 OK & 400 Empty/Format Rejection)** |
+| `/api/v1/ai/respond` | POST | `ConversationEngine` + `OpenAIService` | `conversation_id`, `user_message`, `conversation_context`, `preferred_language`. Outputs `suggested_response`, `alternative_suggestions`, `intent_classification`, `confidence`, `explanation`. | **Verified (200 OK, Proposals only)** |
+| `/api/v1/ai/suggest` | POST | `ConversationEngine` | `text` (e.g. "I water"), `conversation_id`, `language`. Clarifies shorthand into natural assistive sentences preserving user intent. | **Verified (200 OK)** |
+| `/api/v1/sessions/{id}/confirmations` | POST | Confirmation Gate | `action` (`confirm`, `edit`, `reject`), `edited_text`. Enforces human confirmation before speech. | **Verified (200 OK)** |
+
+### 5.3 Automated Pytest Suite Execution (Phase 4)
+
+- **Total Test Suites**: 8
+  - `backend/tests/test_auth.py` (2 tests)
+  - `backend/tests/test_phase3_full.py` (9 tests)
+  - `backend/tests/test_sessions_and_messages.py` (1 test)
+  - `backend/tests/test_gestures_and_preferences.py` (1 test)
+  - `backend/tests/test_speech_and_inference.py` (1 test)
+  - `backend/tests/test_elevenlabs_tts.py` (7 tests)
+  - `backend/tests/test_elevenlabs_stt.py` (8 tests)
+  - `backend/tests/test_openai_service.py` (6 tests)
+  - `backend/tests/test_ai_endpoints_and_context.py` (5 tests)
+- **Total Test Cases**: **40**
+- **Pass Rate**: **100% (40 passed, 0 failed)**
+- **Verification Command**: `$env:PYTHONPATH="."; backend\venv\Scripts\pytest -v`
+
+### 5.4 Frontend Integration Verification
+
+- **Framework**: Next.js 14.2 (App Router)
+- **Build Verification**: `npm --prefix frontend run build` -> **0 Errors across 11 routes**
+- **Speech Service**: `frontend/src/services/speech.service.ts` updated with `synthesizeViaApi`, `playAudioBlob`, `speakAloud`, `transcribeAudioBlob`.
+- **Message Service**: `frontend/src/services/message.service.ts` updated with `getAIResponse`, `getAISuggestions`, `confirmProposal`.
+- **Conversation Screen**: `frontend/src/app/conversation/[id]/page.tsx` updated with AI Suggestions panel, intent badge, rationale explanation, `Edit`, `Confirm`, `Confirm & Speak`, and audio state tracking.
+- **Agency Compliance**: Zero auto-speaking. All AI output strictly labeled as proposals requiring explicit human action.
+
 

@@ -45,6 +45,50 @@ class ContextAssistantService(BaseLLMService):
         # Robust High-Fidelity Heuristic Multimodal Fusion Engine
         return self._generate_heuristic_candidates(partner_text, gesture, lip_active, language, signals_used)
 
+    async def generate_response(
+        self,
+        user_message: str,
+        conversation_context: Optional[List[Dict[str, Any]]] = None,
+        preferred_language: str = "en",
+    ) -> Dict[str, Any]:
+        res = await self.generate_reply_candidates(
+            partner_text=user_message,
+            gesture=None,
+            lip_active=False,
+            history=conversation_context,
+            language=preferred_language,
+        )
+        candidates = res.get("candidates", [])
+        suggested = candidates[0]["text"] if candidates else user_message
+        alternatives = [c["text"] for c in candidates[1:]]
+        return {
+            "suggested_response": suggested,
+            "alternative_suggestions": alternatives,
+            "intent_classification": "assistive_response",
+            "confidence": candidates[0]["confidence"] if candidates else 0.90,
+            "explanation": candidates[0]["reason"] if candidates else "Assistive reply proposal",
+            "candidates": candidates,
+            "needs_clarification": res.get("needs_clarification", False),
+            "signals_used": res.get("signals_used", ["gemini_llm"]),
+        }
+
+    async def generate_suggestions(
+        self,
+        text: str,
+        conversation_context: Optional[List[Dict[str, Any]]] = None,
+        language: str = "en",
+    ) -> Dict[str, Any]:
+        res = await self.generate_response(text, conversation_context=conversation_context, preferred_language=language)
+        return {
+            "original_text": text,
+            "suggested_response": res["suggested_response"],
+            "alternative_suggestions": res["alternative_suggestions"],
+            "intent": res["intent_classification"],
+            "confidence": res["confidence"],
+            "candidates": res["candidates"],
+            "explanation": res["explanation"],
+        }
+
     async def _call_gemini(self, partner_text, gesture, lip_active, history, language):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         
