@@ -38,13 +38,14 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 ];
 
 export const GESTURE_DICTIONARY = [
-  { id: 'thumbs_up', label: 'Thumbs Up', phrase: 'Yes, I agree.', confidence: 0.94, icon: '👍', category: 'affirmation' as const },
-  { id: 'thumbs_down', label: 'Thumbs Down', phrase: 'No, I disagree.', confidence: 0.91, icon: '👎', category: 'negation' as const },
-  { id: 'open_palm', label: 'Open Palm', phrase: 'Please wait a moment.', confidence: 0.88, icon: '✋', category: 'need' as const },
-  { id: 'wave', label: 'Wave', phrase: 'Hello, good to see you.', confidence: 0.95, icon: '👋', category: 'social' as const },
-  { id: 'pointing', label: 'Pointing', phrase: 'I need that one, please.', confidence: 0.84, icon: '👉', category: 'need' as const },
-  { id: 'head_nod', label: 'Head Nod', phrase: 'Yes, absolutely.', confidence: 0.92, icon: '🙂', category: 'affirmation' as const },
-  { id: 'head_shake', label: 'Head Shake', phrase: 'No, that is not right.', confidence: 0.89, icon: '😐', category: 'negation' as const },
+  { id: 'open_palm', label: 'Open Palm', phrase: 'Hello', confidence: 0.91, icon: '✋', category: 'social' as const, description: 'Open hand with fingers extended forward' },
+  { id: 'closed_fist', label: 'Closed Fist', phrase: 'Stop', confidence: 0.93, icon: '✊', category: 'negation' as const, description: 'All fingers contracted firmly into palm' },
+  { id: 'thumbs_up', label: 'Thumbs Up', phrase: 'Yes', confidence: 0.94, icon: '👍', category: 'affirmation' as const, description: 'Thumb pointing upward indicating agreement' },
+  { id: 'thumbs_down', label: 'Thumbs Down', phrase: 'No', confidence: 0.92, icon: '👎', category: 'negation' as const, description: 'Thumb pointing downward indicating disagreement' },
+  { id: 'pointing', label: 'Pointing', phrase: 'I need something', confidence: 0.90, icon: '👉', category: 'need' as const, description: 'Index finger extended directing attention' },
+  { id: 'peace_sign', label: 'Peace Sign', phrase: 'Thank you', confidence: 0.92, icon: '✌️', category: 'social' as const, description: 'Index and middle fingers extended in V formation' },
+  { id: 'stop_gesture', label: 'Stop Gesture', phrase: 'Please wait', confidence: 0.92, icon: '🛑', category: 'need' as const, description: 'Upright raised palm indicating wait or stop' },
+  { id: 'wave', label: 'Wave', phrase: 'Hello, how are you?', confidence: 0.95, icon: '👋', category: 'social' as const, description: 'Lateral hand waving gesture indicating greeting' },
 ];
 
 export const NAV_ITEMS = [

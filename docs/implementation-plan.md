@@ -170,4 +170,65 @@ backend/app/services/
 - **Conversation Screen**: `frontend/src/app/conversation/[id]/page.tsx` updated with AI Suggestions panel, intent badge, rationale explanation, `Edit`, `Confirm`, `Confirm & Speak`, and audio state tracking.
 - **Agency Compliance**: Zero auto-speaking. All AI output strictly labeled as proposals requiring explicit human action.
 
+---
+
+## 6. Phase 5: Multimodal Gesture Recognition Implementation & Verification
+
+### 6.1 Architectural Subsystems
+
+```
+backend/app/services/gesture/
+├── classifier.py        # 21 MediaPipe hand geometric feature extraction & temporal dynamic wave tracking
+├── landmarker.py        # Ephemeral MediaPipe HandLandmarker wrapper with zero-disk retention
+├── recognizer.py        # Recognition orchestrator: confidence gating, custom mappings & Groq AI suggestions
+└── models/
+    └── hand_landmarker.task # Google MediaPipe Tasks vision model asset (7.8 MB)
+```
+
+### 6.2 Gesture Vocabulary & Configurable Shortcuts
+
+| Gesture ID | Pose Type | MediaPipe Joint Heuristics | Default Shortcut Phrase | Category |
+|---|---|---|---|---|
+| `open_palm` | Static | All 5 fingers extended, upright palm facing camera | "Please wait a moment." / "Hello" | Attention / Greeting |
+| `closed_fist` | Static | All 5 fingers contracted into palm, no thumbs up/down | "Stop." | Action Halt |
+| `thumbs_up` | Static | Thumb extended upward ($y_4 < y_2 < y_0$), 4 fingers curled | "Yes, I agree." | Affirmation |
+| `thumbs_down` | Static | Thumb extended downward ($y_4 > y_2 > y_0$), 4 fingers curled | "No, I disagree." | Negation |
+| `pointing` | Static | Index extended, thumb & middle/ring/pinky retracted | "I need something." | Need Direction |
+| `peace_sign` | Static | Index & middle extended in V spread, ring/pinky retracted | "Thank you." | Social Gratitude |
+| `stop_gesture` | Static | Upright raised palm facing camera, steady posture | "Please wait a moment." | Action Pause |
+| `wave` | Dynamic | Open hand with temporal lateral oscillation ($reversals \ge 2, \sum|\Delta x| > 0.10$) | "Hello, good to see you." | Social Greeting |
+
+*Notice: Communication shortcuts are configurable shortcuts, not complete universal sign language translation.*
+
+### 6.3 REST & WebSocket API Verification Matrix
+
+| Endpoint | Method | Input Parameters | Output & Guarantees | Status |
+|---|---|---|---|---|
+| `/api/v1/gesture/recognize` | POST | `image_data` (base64) OR `landmarks` (21 pts) OR `gesture_name` | Full pipeline: returns label, confidence, suggested text, AI expansions, status, landmark count. | **Verified (200 OK)** |
+| `/api/v1/gesture/classify` | POST | `landmarks` (21 3D points) | Low-latency direct landmark geometric classification without frame decoding overhead. | **Verified (200 OK)** |
+| `/api/v1/gesture/vocabulary` | GET | None | Complete 8-gesture vocabulary metadata with active user customized phrases. | **Verified (200 OK)** |
+| `/api/v1/gesture/mappings` | PUT | `mappings: Dict[str, str]` | Updates user customizable gesture-to-phrase mappings. | **Verified (200 OK)** |
+| `/api/v1/gesture/history` | GET | None | Ephemeral in-memory history of recent recognition events with timestamps. | **Verified (200 OK)** |
+| `/ws/gesture` | WS | `{"type": "frame"}` OR `{"type": "landmarks"}` | Real-time bi-directional streaming for live video landmark overlay and continuous classification. | **Verified (Connected & Streaming)** |
+
+### 6.4 Automated Test Suite Execution (Phase 5)
+
+- **Total Test Suites**: 9 (`backend/tests/`)
+- **Total Test Cases**: **50**
+- **Pass Rate**: **100% (50 passed, 0 failed)**
+- **Verification Details**:
+  - `backend/tests/test_phase5_gestures.py`: 10 comprehensive tests covering static gestures (Open Palm, Closed Fist, Thumbs Up, Thumbs Down, Pointing, Peace Sign, Stop Gesture), dynamic gesture (Wave temporal motion), low-confidence & empty frames, base64 frame recognition, vocabulary endpoints, custom mappings, history, and WebSocket streaming.
+
+### 6.5 Frontend Camera & UI Verification
+
+- **Route**: `GET /gesture` (13 kB Next.js App Router)
+- **Live Camera**: `CameraPreview.tsx` with start/stop, permission error guard, real-time 21-landmark skeletal canvas overlay.
+- **Continuous Mode**: Live tracking interval toggle + manual capture fallback.
+- **Result Card**: `GestureResultCard.tsx` with color-coded confidence bar, static/dynamic badges, low-confidence warning, inline sentence editor, and AI expansion pills.
+- **Strict Confirmation Gate**: High-contrast, large touch-target (>52px) "Confirm & Speak Aloud" button. Never speaks without explicit human confirmation.
+- **Workspace Forwarding**: "Send to Chat" button to route confirmed gesture sentences to active conversation workspace.
+- **Customization Modal**: `GestureMappingsModal.tsx` for remapping all 8 vocabulary shortcut phrases.
+- **Accessibility**: Full keyboard tab traversal, high contrast styling (`high-contrast:...`), ARIA live regions (`aria-live="polite"`).
+
+
 

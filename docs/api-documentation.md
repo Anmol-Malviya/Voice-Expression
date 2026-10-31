@@ -189,3 +189,65 @@
 - **Path**: `/phrases/{phrase_id}`
 - **Status**: `204 No Content`
 
+---
+
+## 8. Multimodal Gesture Recognition Endpoints
+
+### Recognize Gesture (Full Pipeline)
+- **Method**: `POST`
+- **Path**: `/api/v1/gesture/recognize`
+- **Request Body**:
+  ```json
+  {
+    "image_data": "data:image/jpeg;base64,...",
+    "landmarks": null,
+    "gesture_name": null,
+    "generate_suggestions": true
+  }
+  ```
+- **Response**: `GestureRecognizeResponse` with `label`, `confidence`, `suggested_text`, `ai_suggestions`, `status`, `is_dynamic`, `landmark_count`.
+
+### Classify Landmarks
+- **Method**: `POST`
+- **Path**: `/api/v1/gesture/classify`
+- **Request Body**:
+  ```json
+  {
+    "landmarks": [
+      {"x": 0.5, "y": 0.8, "z": 0.0},
+      ...
+    ]
+  }
+  ```
+
+### Get Gesture Vocabulary
+- **Method**: `GET`
+- **Path**: `/api/v1/gesture/vocabulary`
+- **Response**: List of 8 core vocabulary items (`open_palm`, `closed_fist`, `thumbs_up`, `thumbs_down`, `pointing`, `peace_sign`, `stop_gesture`, `wave`) with default & active phrases.
+
+### Update Custom Mappings
+- **Method**: `PUT`
+- **Path**: `/api/v1/gesture/mappings`
+- **Request Body**:
+  ```json
+  {
+    "mappings": {
+      "open_palm": "Hello, good to see you.",
+      "pointing": "I need some water, please."
+    }
+  }
+  ```
+
+### Ephemeral Gesture History
+- **Method**: `GET`
+- **Path**: `/api/v1/gesture/history`
+
+### Real-Time WebSocket
+- **Protocol**: `WS`
+- **Path**: `/ws/gesture` (also `/api/v1/gesture/ws`)
+- **Message Types**:
+  - `{"type": "frame", "image": "data:image/jpeg;base64,..."}`
+  - `{"type": "landmarks", "landmarks": [...]}`
+  - `{"type": "ping"}`
+
+
