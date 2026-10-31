@@ -1,32 +1,61 @@
-from fastapi import APIRouter, Depends
 from typing import Optional
+from fastapi import APIRouter, Depends, status, Response
 from backend.app.schemas.preferences import UserPreferencesSchema
-from backend.app.core.database import get_preferences_collection
-from backend.app.core.security import get_current_user_optional
+from backend.app.services.preferences_service import preferences_service
+from backend.app.core.dependencies import get_current_user, get_current_user_optional
+from backend.app.utils.responses import success_response
 
-router = APIRouter(tags=["User Preferences"])
+router = APIRouter(tags=["Preferences"])
 
-@router.get("/preferences", response_model=UserPreferencesSchema)
+@router.get("/preferences")
 async def get_preferences(current_user: Optional[dict] = Depends(get_current_user_optional)):
-    user_id = current_user.get("sub") if current_user else "anonymous"
-    prefs_col = get_preferences_collection()
-    doc = await prefs_col.find_one({"user_id": user_id})
-    if not doc:
-        return UserPreferencesSchema(user_id=user_id)
-    return UserPreferencesSchema(**doc)
+    """Retrieve accessibility, voice, and language preferences for authenticated user."""
+    user_id = current_user["id"] if current_user else "usr_demo_alex"
+    prefs = await preferences_service.get_preferences(user_id)
+    return success_response(
+        data=prefs,
+        message="Preferences retrieved successfully",
+        extra_fields=prefs,
+    )
 
-@router.patch("/preferences", response_model=UserPreferencesSchema)
-@router.put("/preferences", response_model=UserPreferencesSchema)
-async def update_preferences(req: UserPreferencesSchema, current_user: Optional[dict] = Depends(get_current_user_optional)):
-    user_id = current_user.get("sub") if current_user else "anonymous"
-    prefs_col = get_preferences_collection()
-    data = req.dict(exclude_unset=True)
-    data["user_id"] = user_id
+@router.put("/preferences")
+@router.patch("/preferences")
+async def update_preferences(
+    req: UserPreferencesSchema,
+    current_user: Optional[dict] = Depends(get_current_user_optional)
+):
+    """Update accessibility, speech rate, volume, and language preferences."""
+    user_id = current_user["id"] if current_user else "usr_demo_alex"
+    updates = req.model_dump(exclude_unset=True)
+    updated = await preferences_service.update_preferences(user_id, updates)
+    return success_response(
+        data=updated,
+        message="Preferences updated successfully",
+        extra_fields=updated,
+    )
 
-    await prefs_col.update_one({"user_id": user_id}, {"$set": data})
-    updated = await prefs_col.find_one({"user_id": user_id})
-    if not updated:
-        await prefs_col.insert_one(data)
-        updated = data
-    return UserPreferencesSchema(**updated)
+# Voice Cloning Consent Endpoints (SRC-07 / FR-013)
+@router.post("/voice-consents", status_code=status.HTTP_201_CREATED)
+async def grant_voice_consent(
+    payload: dict,
+    current_user: Optional[dict] = Depends(get_current_user_optional)
+):
+    """Grant informed consent for cloned voice model generation."""
+    user_id = current_user["id"] if current_user else "usr_demo_alex"
+    await preferences_service.update_preferences(user_id, {"voice_cloning_consent": True})
+    return success_response(
+        data={"consent_id": "vc_" + user_id[:8], "status": "active"},
+        message="Voice cloning consent granted and recorded",
+        status_code=status.HTTP_201_CREATED,
+        extra_fields={"consent_id": "vc_" + user_id[:8], "status": "active"},
+    )
 
+@router.delete("/voice-consents/{consent_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_voice_consent(
+    consent_id: str,
+    current_user: Optional[dict] = Depends(get_current_user_optional)
+):
+    """Revoke consent for voice cloning models."""
+    user_id = current_user["id"] if current_user else "usr_demo_alex"
+    await preferences_service.update_preferences(user_id, {"voice_cloning_consent": False})
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

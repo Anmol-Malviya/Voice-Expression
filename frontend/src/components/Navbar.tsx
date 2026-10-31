@@ -3,61 +3,62 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Volume2, 
-  Sun, 
-  Moon, 
-  Eye, 
-  Type, 
-  MessageSquare, 
-  LayoutDashboard, 
-  Video, 
-  Sliders, 
-  User, 
-  LogOut, 
+import {
+  Volume2,
+  Sun,
+  Moon,
+  Eye,
+  Type,
+  MessageSquare,
+  LayoutDashboard,
+  Video,
+  Sliders,
+  User,
+  LogOut,
   LogIn,
-  History
+  History,
+  Zap,
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 
 export const Navbar = () => {
   const pathname = usePathname();
-  const { 
-    fontSize, 
-    cycleFontSize, 
-    highContrast, 
-    toggleHighContrast, 
-    theme, 
+  const isLanding = pathname === '/';
+  const {
+    fontSize,
+    cycleFontSize,
+    highContrast,
+    toggleHighContrast,
+    theme,
     toggleTheme,
     user,
     logout,
-    isAuthenticated
+    isAuthenticated,
   } = useAppStore();
 
   const isActive = (path: string) => pathname === path;
 
   return (
-    <header 
+    <header
       role="banner"
-      className="sticky top-0 z-40 w-full border-b backdrop-blur bg-white/95 dark:bg-slate-900/95 high-contrast:bg-black high-contrast:border-yellow-400 border-slate-200 dark:border-slate-800 transition-colors"
+      className="sticky top-0 z-40 w-full border-b backdrop-blur-md bg-white/95 dark:bg-slate-900/95 high-contrast:bg-black high-contrast:border-yellow-400 border-slate-200 dark:border-slate-800 transition-colors"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
           {/* Logo */}
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="flex items-center gap-3 focus:outline-none focus:ring-4 focus:ring-brand-500 rounded-lg p-1"
             aria-label="VoiceExpression Home"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#6651E8] to-indigo-500 high-contrast:bg-yellow-400 flex items-center justify-center text-white high-contrast:text-black shadow-md">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#6651E8] to-indigo-500 high-contrast:bg-yellow-400 flex items-center justify-center text-white high-contrast:text-black shadow-md">
               <Volume2 className="w-7 h-7" aria-hidden="true" />
             </div>
             <div>
-              <span className="text-2xl font-bold tracking-tight text-[#172554] dark:text-white high-contrast:text-yellow-400">
+              <span className="text-2xl font-black tracking-tight text-[#172554] dark:text-white high-contrast:text-yellow-400">
                 Voice<span className="text-[#6651E8] dark:text-purple-400 high-contrast:text-white">Expression</span>
               </span>
-              <span className="hidden sm:block text-xs font-semibold text-teal-700 dark:text-teal-400 high-contrast:text-cyan-300">
+              <span className="hidden sm:block text-[11px] font-bold text-teal-700 dark:text-teal-400 high-contrast:text-cyan-300 uppercase tracking-wider">
                 AI Manthan 2.0 &bull; PS16
               </span>
             </div>
@@ -65,121 +66,169 @@ export const Navbar = () => {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center space-x-1.5" aria-label="Main Navigation">
-            <Link
-              href="/conversation/active"
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all text-sm min-h-[48px] ${
-                pathname.startsWith('/conversation')
-                  ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
-                  : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Live Conversation</span>
-            </Link>
+            {isLanding ? (
+              <>
+                <Link
+                  href="/"
+                  className="px-3.5 py-2 rounded-xl font-bold text-sm text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Home
+                </Link>
+                <a
+                  href="#features"
+                  className="px-3.5 py-2 rounded-xl font-bold text-sm text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Features
+                </a>
+                <a
+                  href="#how-it-works"
+                  className="px-3.5 py-2 rounded-xl font-bold text-sm text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  How It Works
+                </a>
+                <a
+                  href="#about"
+                  className="px-3.5 py-2 rounded-xl font-bold text-sm text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  About
+                </a>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/dashboard"
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition text-sm min-h-[44px] ${
+                    isActive('/dashboard')
+                      ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
+                      : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
 
-            <Link
-              href="/dashboard"
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all text-sm min-h-[48px] ${
-                isActive('/dashboard')
-                  ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
-                  : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard</span>
-            </Link>
+                <Link
+                  href="/conversation/active"
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition text-sm min-h-[44px] ${
+                    pathname.startsWith('/conversation')
+                      ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
+                      : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Conversation</span>
+                </Link>
 
-            <Link
-              href="/gesture"
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all text-sm min-h-[48px] ${
-                isActive('/gesture')
-                  ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
-                  : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Video className="w-4 h-4" />
-              <span>Gestures</span>
-            </Link>
+                <Link
+                  href="/gesture"
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition text-sm min-h-[44px] ${
+                    isActive('/gesture')
+                      ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
+                      : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Video className="w-4 h-4" />
+                  <span>Gestures</span>
+                </Link>
 
-            <Link
-              href="/history"
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all text-sm min-h-[48px] ${
-                isActive('/history')
-                  ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
-                  : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <History className="w-4 h-4" />
-              <span>History</span>
-            </Link>
+                <Link
+                  href="/history"
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition text-sm min-h-[44px] ${
+                    isActive('/history')
+                      ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
+                      : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <History className="w-4 h-4" />
+                  <span>History</span>
+                </Link>
 
-            <Link
-              href="/settings"
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all text-sm min-h-[48px] ${
-                isActive('/settings')
-                  ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
-                  : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              <span>Settings</span>
-            </Link>
+                <Link
+                  href="/settings"
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition text-sm min-h-[44px] ${
+                    isActive('/settings')
+                      ? 'bg-[#6651E8] text-white shadow-md high-contrast:bg-yellow-400 high-contrast:text-black'
+                      : 'text-[#172554] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Sliders className="w-4 h-4" />
+                  <span>Settings</span>
+                </Link>
+              </>
+            )}
           </nav>
 
-          {/* Quick Accessibility Toggles */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Accessibility Quick Toggles & User Auth CTA */}
+          <div className="flex items-center gap-2">
+            {/* Font Size Cycle */}
             <button
               onClick={cycleFontSize}
-              className="flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition"
-              aria-label={`Cycle font size. Current: ${fontSize}`}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-black min-h-[44px] flex items-center gap-1.5 transition"
+              title={`Cycle text size: ${fontSize}`}
+              aria-label={`Cycle font size. Current is ${fontSize}`}
             >
-              <Type className="w-3.5 h-3.5 text-[#6651E8]" />
-              <span className="uppercase">{fontSize}</span>
+              <Type className="w-4 h-4 text-[#6651E8] dark:text-purple-400" />
+              <span className="hidden sm:inline capitalize">{fontSize}</span>
             </button>
 
+            {/* High Contrast */}
             <button
               onClick={toggleHighContrast}
-              className={`p-2.5 rounded-xl border font-bold transition ${
-                highContrast 
-                  ? 'bg-yellow-400 text-black border-yellow-400' 
-                  : 'border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+              className={`p-2 sm:px-3 sm:py-2 rounded-xl border text-xs font-black min-h-[44px] flex items-center gap-1.5 transition ${
+                highContrast
+                  ? 'bg-yellow-400 text-black border-yellow-500'
+                  : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
-              aria-label="Toggle High Contrast"
+              title="Toggle High Contrast"
+              aria-pressed={highContrast}
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-4 h-4 text-amber-500" />
+              <span className="hidden sm:inline">Contrast</span>
             </button>
 
+            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-              aria-label="Toggle Dark Theme"
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[44px] min-w-[44px] flex items-center justify-center transition"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5 text-amber-400" />
+              ) : (
+                <Moon className="w-5 h-5 text-indigo-500" />
+              )}
             </button>
 
+            {/* Auth Buttons */}
             {isAuthenticated ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-                <span className="hidden lg:inline text-xs font-bold text-[#172554] dark:text-white">
-                  {user?.name || 'Alex Mercer'}
-                </span>
-                <button
-                  onClick={logout}
-                  className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                  aria-label="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
               <Link
-                href="/login"
-                className="px-4 py-2 rounded-xl bg-[#6651E8] text-white font-bold text-xs shadow"
+                href="/profile"
+                className="flex items-center gap-2 p-1.5 pl-3 rounded-2xl bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 min-h-[44px] transition"
               >
-                Sign In
+                <span className="hidden sm:inline text-xs font-bold text-purple-900 dark:text-purple-200">
+                  {user?.name ? user.name.split(' ')[0] : 'Profile'}
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-[#6651E8] text-white flex items-center justify-center font-black text-xs">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                </div>
               </Link>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-3.5 py-2 rounded-xl font-bold text-sm text-[#172554] dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[44px] flex items-center"
+                >
+                  <span>Login</span>
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 rounded-xl font-extrabold text-sm bg-[#6651E8] text-white hover:bg-[#533ed4] shadow-sm min-h-[44px] flex items-center"
+                >
+                  <span>Get Started</span>
+                </Link>
+              </div>
             )}
           </div>
-
         </div>
       </div>
     </header>
@@ -187,4 +236,3 @@ export const Navbar = () => {
 };
 
 export default Navbar;
-

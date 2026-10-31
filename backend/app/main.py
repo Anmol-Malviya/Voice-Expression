@@ -1,24 +1,15 @@
 from contextlib import asynccontextmanager
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from backend.app.core.config import settings
-from backend.app.core.database import db_manager
-
-# Import API Routers
-from backend.app.api.v1.auth import router as auth_router
-from backend.app.api.v1.sessions import router as sessions_router
-from backend.app.api.v1.messages import router as messages_router
-from backend.app.api.v1.speech import router as speech_router
-from backend.app.api.v1.inference import router as inference_router
-from backend.app.api.v1.gesture import router as gesture_router
-from backend.app.api.v1.preferences import router as preferences_router
-from backend.app.api.v1.quick_phrases import router as quick_phrases_router
-from backend.app.api.v1.evaluations import router as evaluations_router
-from backend.app.api.v1.health import router as health_router
-from backend.app.api.v1.feedback import router as feedback_router
+from backend.app.database.mongodb import db_manager
+from backend.app.database.indexes import create_database_indexes
+from backend.app.middleware.authentication import AuthenticationMiddleware
+from backend.app.api.v1.router import api_router
 from backend.app.websockets.routes import ws_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -26,9 +17,11 @@ logger = logging.getLogger("voice_expression")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing VoiceExpression Backend...")
+    logger.info("Initializing VoiceExpression Backend & MongoDB Database Engine...")
     await db_manager.connect()
+    await create_database_indexes()
     yield
+    await db_manager.close()
     logger.info("Shutting down VoiceExpression Backend...")
 
 app = FastAPI(
@@ -37,10 +30,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
-# CORS Middleware
+# CORS Middleware (supports credentials, headers, and frontend ports 3000 & 5173)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if settings.APP_ENV == "development" else settings.cors_origins,
@@ -49,23 +42,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount Routes under /api/v1
-for r in [
-    auth_router, 
-    sessions_router, 
-    messages_router, 
-    speech_router, 
-    inference_router, 
-    gesture_router, 
-    preferences_router, 
-    quick_phrases_router, 
-    evaluations_router, 
-    health_router,
-    feedback_router
-]:
-    app.include_router(r, prefix="/api/v1")
-    # Also mount under /api for full endpoint contract coverage
-    app.include_router(r, prefix="/api")
+# Authentication Token Inspector Middleware
+app.add_middleware(AuthenticationMiddleware)
+
+# Custom Exception Handlers for Envelope Consistency (Section 10)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    headers = getattr(exc, "headers", None)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": str(exc.detail),
+            "detail": exc.detail,
+        },
+        headers=headers,
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "message": "Validation error in request body or parameters.",
+            "detail": exc.errors(),
+        },
+    )
+
+# Mount API Routers under /api/v1 and /api
+app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api")
 
 # Mount WebSocket Router
 app.include_router(ws_router)
@@ -75,14 +82,14 @@ app.include_router(ws_router)
 @app.get("/ready")
 async def root():
     return {
+        "success": True,
         "status": "ok",
         "message": "VoiceExpression Live Assistive API is running",
+        "database": "MongoDB Atlas" if db_manager.is_atlas_connected else "Local Async Memory (ai_manthan)",
         "documentation": "/docs",
-        "health": "/api/health",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.app.main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=True)
-
