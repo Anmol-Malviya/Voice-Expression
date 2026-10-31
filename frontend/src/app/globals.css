@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #F8F9FC;
+    --text-primary: #172554;
+    --card-bg: #FFFFFF;
+    --brand-primary: #6651E8;
+    --accent-teal: #0F766E;
+  }
+
+  .dark {
+    --bg-primary: #0F172A;
+    --text-primary: #F8FAFC;
+    --card-bg: #1E293B;
+    --brand-primary: #8B5CF6;
+    --accent-teal: #14B8A6;
+  }
+
+  .high-contrast {
+    --bg-primary: #000000;
+    --text-primary: #FFFFFF;
+    --card-bg: #000000;
+    --brand-primary: #FFFF00;
+    --accent-teal: #00FFFF;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* High contrast border & element overrides */
+  .high-contrast * {
+    border-color: #FFFF00 !important;
+  }
+  .high-contrast button {
+    outline: 2px solid #FFFF00 !important;
+  }
+
+  /* Text scale classes */
+  .scale-normal {
+    font-size: 100%;
+  }
+  .scale-large {
+    font-size: 115%;
+  }
+  .scale-xlarge {
+    font-size: 130%;
+  }
+
+  /* Reduced motion */
+  .reduced-motion *,
+  .reduced-motion *::before,
+  .reduced-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  :focus-visible {
+    outline: 3px solid #6651E8 !important;
+    outline-offset: 3px !important;
+    border-radius: 6px;
+  }
+}
+
