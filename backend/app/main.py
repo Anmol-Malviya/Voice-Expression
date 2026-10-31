@@ -1,5 +1,16 @@
+import sys
+import os
 from contextlib import asynccontextmanager
 import logging
+
+# Ensure repo root and backend directory are always on sys.path regardless of execution working directory
+_app_dir = os.path.dirname(os.path.abspath(__file__))
+_backend_dir = os.path.dirname(_app_dir)
+_repo_root = os.path.dirname(_backend_dir)
+for _p in [_repo_root, _backend_dir]:
+    if _p and _p not in sys.path:
+        sys.path.insert(0, _p)
+
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse

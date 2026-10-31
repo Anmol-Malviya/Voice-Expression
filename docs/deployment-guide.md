@@ -75,18 +75,22 @@ flowchart LR
 3. Connect your GitHub repository: `Voice-Expression`.
 4. Configure service parameters:
    - **Name**: `voice-expression-backend`
-   - **Region**: Closest to your users (e.g., Singapore or Frankfurt or Oregon)
+   - **Region**: Closest to your users (e.g., Oregon or Frankfurt or Singapore)
    - **Branch**: `main`
-   - **Root Directory**: `backend` (or root if using Dockerfile)
+   - **Root Directory**: Leave blank (Repository Root) or set to `backend`
    - **Runtime**: `Python 3`
    - **Build Command**:
      ```bash
-     pip install -r requirements.txt
+     pip install -r backend/requirements.txt
      ```
+     *(If Root Directory is set to `backend`, use: `pip install -r requirements.txt`)*
    - **Start Command**:
      ```bash
-     uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
      ```
+     *(If Root Directory is set to `backend`, use: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`)*
+   - **Auto-Deploy**: `Yes`
+   - **Python Version**: `3.11.9` (auto-detected from `.python-version`)
 
 ### Step 2: Configure Environment Variables
 In the Render Service **Environment** tab, add all required variables listed in Section 2.1.
@@ -143,4 +147,19 @@ Click **Deploy**. Upon build completion:
 - [ ] **Authentication**: Registering a test account generates JWT token stored in browser session.
 - [ ] **Zero-Retention Camera**: WebCam stream unmounts and releases hardware device cleanly when navigating between pages.
 - [ ] **WCAG Accessibility**: High-contrast mode and 130% text scaling render correctly across mobile and desktop viewports.
+
+---
+
+## 7. Troubleshooting Common Deployment Issues
+
+| Issue / Symptom | Root Cause | Solution |
+|---|---|---|
+| **CORS policy blocking API requests** | `ALLOWED_ORIGINS` on Render does not match your Vercel URL | In Render Environment settings, update `ALLOWED_ORIGINS` to `https://<your-vercel-domain>.vercel.app` (comma-separated, no trailing slash). |
+| **WebSocket connection failed (`WSS`)** | Frontend connecting over non-secure `ws://` instead of `wss://` | In Vercel Environment settings, ensure `NEXT_PUBLIC_WS_URL` is set to `wss://<your-render-domain>.onrender.com` (using secure `wss://`). |
+| **MediaPipe / OpenCV runtime errors on Linux** | Missing X11 or GUI dependencies | Verify that `backend/requirements.txt` contains `opencv-python-headless>=4.8.0` and `mediapipe>=0.10.0`, and `.python-version` is set to `3.11.9`. |
+| **Backend reports "Local Async Memory"** | `MONGODB_URI` is unconfigured or blocked by Atlas IP Access | In Render Dashboard, ensure `MONGODB_URI` is set. In MongoDB Atlas **Network Access**, ensure `0.0.0.0/0` is whitelisted. |
+| **ElevenLabs TTS returns 402 Payment Required** | Selected voice requires an ElevenLabs paid subscription tier | Free tier ElevenLabs accounts must use premade voices. Use default voice `EXAVITQu4vr4xnSDxMaL` (Sarah) or `CwhRBWXzGAHq8TQ4Fs17` (Roger). |
+| **Groq returns 404 Model Not Found** | Requested model ID is deprecated or not entitled for the account | Set `GROQ_MODEL=openai/gpt-oss-120b` or `llama-3.3-70b-versatile` in Render environment variables. |
+| **Render cold start delay** | Render free tier spins down idle containers after 15 minutes | Ping `https://<backend>/health` to wake up the service. Upgrading to a starter instance provides always-on availability. |
+
 

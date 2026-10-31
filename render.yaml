@@ -4,9 +4,8 @@ services:
     runtime: python
     region: oregon
     plan: free
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -14,6 +13,10 @@ services:
         value: production
       - key: APP_HOST
         value: 0.0.0.0
+      - key: PYTHONPATH
+        value: .
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: ALLOWED_ORIGINS
         sync: false
       - key: JWT_SECRET
@@ -29,11 +32,10 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: openai/gpt-oss-120b
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: ELEVENLABS_DEFAULT_VOICE_ID
-        value: 21m00Tcm4TlvDq8ikWAM
+        value: EXAVITQu4vr4xnSDxMaL
       - key: ELEVENLABS_TTS_MODEL
         value: eleven_multilingual_v2
-
